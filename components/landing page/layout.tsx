@@ -2,9 +2,9 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { LenisProvider } from "@/components/lenis-provider"
-import ClickSpark from "@/components/click-spark"
-import "./globals.css"
+import { LenisProvider } from "./lenis-provider"
+import ClickSpark from "./click-spark"
+import "@/app/globals.css"
 
 const _inter = Inter({
   subsets: ["latin"],

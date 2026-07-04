@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { motion, AnimatePresence, useSpring } from "framer-motion"
+import { motion, AnimatePresence, useSpring, Variants } from "framer-motion"
 import { useState } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -38,7 +38,7 @@ const flavors = [
   },
 ]
 
-const slideVariants = {
+const slideVariants: Variants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 300 : -300,
     opacity: 0,

@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, Variants } from "framer-motion"
 import Link from "next/link"
 import { useLenis } from "lenis/react"
 import { Menu, X } from "lucide-react"
 
-const linkVariants = {
+const linkVariants: Variants = {
   hidden: { opacity: 0, y: -10 },
   visible: (i: number) => ({
     opacity: 1,
@@ -19,7 +19,7 @@ const linkVariants = {
   }),
 }
 
-const mobileMenuVariants = {
+const mobileMenuVariants: Variants = {
   hidden: { opacity: 0, height: 0 },
   visible: {
     opacity: 1,
@@ -55,7 +55,7 @@ export function Navigation() {
   const scrollToSection = (id: string) => {
     const element = document.querySelector(id)
     if (element && lenis) {
-      lenis.scrollTo(element, { offset: -100 })
+      lenis.scrollTo(element as HTMLElement, { offset: -100 })
     }
     setMobileMenuOpen(false)
   }

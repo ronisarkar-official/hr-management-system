@@ -1,10 +1,10 @@
-import { Navigation } from "@/components/navigation"
-import { HeroSection } from "@/components/hero-section"
-import { FlavorCarousel } from "@/components/flavor-carousel"
-import { BentoGrid } from "@/components/bento-grid"
-import { ActivationsSection } from "@/components/activations-section"
-import { SocialSection } from "@/components/social-section"
-import { Footer } from "@/components/footer"
+import { Navigation } from "./navigation"
+import { HeroSection } from "./hero-section"
+import { FlavorCarousel } from "./flavor-carousel"
+import { BentoGrid } from "./bento-grid"
+import { ActivationsSection } from "./activations-section"
+import { SocialSection } from "./social-section"
+import { Footer } from "./footer"
 
 export default function Home() {
   return (
