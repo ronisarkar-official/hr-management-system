@@ -74,6 +74,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { supabase } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -308,12 +309,12 @@ export const DashboardSidebar = ({
             {userRole === "admin" && (
               <SidebarGroup className="group-data-[collapsible=icon]:hidden">
                 <div className="flex items-center justify-between px-2 py-1.5 mb-1">
-                  <SidebarGroupLabel className="p-0 text-purple-600 dark:text-purple-400 font-extrabold tracking-wide uppercase text-[11px] flex items-center gap-1.5">
+                  <SidebarGroupLabel className="p-0 text-foreground font-extrabold tracking-wide uppercase text-[11px] flex items-center gap-1.5">
                     <Sparkles className="size-3.5" />
                     HR Admin Modules
                   </SidebarGroupLabel>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/30">
-                    HR ONLY
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-bold border border-primary/20">
+                    ADMIN
                   </span>
                 </div>
                 <SidebarMenu>
@@ -322,12 +323,12 @@ export const DashboardSidebar = ({
                       <SidebarMenuButton
                         asChild
                         tooltip={item.name}
-                        className="hover:bg-purple-500/10 hover:text-purple-600 dark:hover:text-purple-400 transition-colors font-medium"
+                        className="hover:bg-accent hover:text-accent-foreground transition-colors font-medium"
                       >
-                        <a href={item.url}>
-                          <item.icon className="text-purple-500 shrink-0" />
+                        <Link href={item.url}>
+                          <item.icon className="text-muted-foreground shrink-0" />
                           <span>{item.name}</span>
-                        </a>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
@@ -361,9 +362,9 @@ export const DashboardSidebar = ({
                           {item.items?.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.title}>
                               <SidebarMenuSubButton asChild>
-                                <a href={subItem.url}>
+                                <Link href={subItem.url}>
                                   <span>{subItem.title}</span>
-                                </a>
+                                </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
@@ -433,6 +434,10 @@ export const DashboardSidebar = ({
                       <DropdownMenuItem>
                         <Bell className="mr-2 size-4" />
                         Notifications
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+                        <User className="mr-2 size-4" />
+                        My Profile
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />

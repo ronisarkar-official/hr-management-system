@@ -2,24 +2,60 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
-import { Briefcase, Mail, Phone, MapPin, Calendar, Building, UserCheck, Shield } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getMyProfile } from "@/lib/actions/profile";
+import { EmployeeProfileView } from "@/components/employee-profile-view";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Profile } from "@/lib/types";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const result = await getMyProfile(user.id);
+      if (result.success && result.data) {
+        setProfile(result.data);
+      }
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    loadProfile();
   }, []);
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Employee";
-  const employeeId = user?.user_metadata?.employee_id || "EMP-1001";
-  const role = user?.user_metadata?.role || "employee";
-  const email = user?.email || "employee@organization.com";
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-16 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground">Profile not found.</p>
+      </div>
+    );
+  }
 
   return (
-    <>
-    </>
+    <EmployeeProfileView
+      profile={profile}
+      isAdmin={profile.role === "admin"}
+      readOnly={false}
+      onSave={loadProfile}
+    />
   );
 }

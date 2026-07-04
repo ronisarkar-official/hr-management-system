@@ -3,19 +3,32 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Mail, Lock, User, Briefcase, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  Building2,
+  Hash,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signUpCompanyAdmin } from "@/lib/actions/auth";
 import { supabase } from "@/lib/supabase/client";
 
 export default function SignupPage() {
-  const [name, setName] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [companyCode, setCompanyCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"employee" | "admin">("employee");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
@@ -27,11 +40,17 @@ export default function SignupPage() {
   const hasMinLength = password.length >= 8;
   const hasUpperLower = /[a-z]/.test(password) && /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*(),.?":{}|<>-_=+]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>\-_=+]/.test(password);
   const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   const isPasswordValid =
     hasMinLength && hasUpperLower && hasNumber && hasSpecial && passwordsMatch;
+
+  // Company code validation
+  const isCompanyCodeValid =
+    companyCode.length >= 2 &&
+    companyCode.length <= 6 &&
+    /^[A-Za-z]+$/.test(companyCode);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,29 +67,43 @@ export default function SignupPage() {
       return;
     }
 
+    if (!isCompanyCodeValid) {
+      setError("Company code must be 2-6 letters (A-Z).");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
+      const result = await signUpCompanyAdmin({
+        companyName: companyName.trim(),
+        companyCode: companyCode.toUpperCase().trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name: name,
-            employee_id: employeeId,
-            role: role,
-          },
-        },
       });
 
-      if (error) {
-        setError(error.message || "Something went wrong during registration");
+      if (!result.success) {
+        setError(result.error || "Something went wrong during registration.");
         return;
       }
 
-      setSuccessMsg(
-        "Registration successful! Please check your email inbox to verify your account before logging in."
-      );
+      // Sign in the user immediately after signup
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        setSuccessMsg(
+          "Company created successfully! Please sign in with your credentials."
+        );
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -82,10 +115,10 @@ export default function SignupPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Create HRMS account
+          Create your company
         </h2>
         <p className="text-muted-foreground text-sm">
-          Join your organization portal
+          Set up your organization&apos;s HRMS portal
         </p>
       </div>
 
@@ -102,33 +135,74 @@ export default function SignupPage() {
           </div>
         )}
 
+        {/* Company Info */}
         <div className="space-y-2">
-          <Label htmlFor="name">Full name</Label>
+          <Label htmlFor="companyName">Company Name</Label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              id="name"
+              id="companyName"
               type="text"
-              placeholder="John Doe"
+              placeholder="Acme Corporation"
               className="h-9 pl-10"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
               required
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="employeeId">Employee ID</Label>
+          <Label htmlFor="companyCode">
+            Company Code{" "}
+            <span className="text-muted-foreground font-normal">
+              (2-6 letters, used in Login IDs)
+            </span>
+          </Label>
           <div className="relative">
-            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              id="employeeId"
+              id="companyCode"
               type="text"
-              placeholder="e.g. EMP-1001"
-              className="h-9 pl-10"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
+              placeholder="ACME"
+              className="h-9 pl-10 uppercase"
+              value={companyCode}
+              onChange={(e) =>
+                setCompanyCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6))
+              }
+              required
+              minLength={2}
+              maxLength={6}
+            />
+          </div>
+        </div>
+
+        {/* Admin Info */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="John"
+                className="h-9 pl-10"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              type="text"
+              placeholder="Doe"
+              className="h-9"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               required
             />
           </div>
@@ -141,7 +215,7 @@ export default function SignupPage() {
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="admin@company.com"
               className="h-9 pl-10"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -222,46 +296,18 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Account Role</Label>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => setRole("employee")}
-              className={`flex items-center justify-center rounded-md border py-2 text-sm font-medium transition-colors ${
-                role === "employee"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-input bg-background hover:bg-accent"
-              }`}
-            >
-              Employee
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole("admin")}
-              className={`flex items-center justify-center rounded-md border py-2 text-sm font-medium transition-colors ${
-                role === "admin"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-input bg-background hover:bg-accent"
-              }`}
-            >
-              Admin / HR
-            </button>
-          </div>
-        </div>
-
         <Button
           type="submit"
           className="w-full h-9 text-sm font-medium"
-          disabled={loading || !!successMsg}
+          disabled={loading || !isPasswordValid || !isCompanyCodeValid || !!successMsg}
         >
           {loading ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Creating account…
+              Creating company…
             </>
           ) : (
-            "Create account"
+            "Create company & admin account"
           )}
         </Button>
       </form>
