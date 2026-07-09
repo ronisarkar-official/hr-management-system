@@ -58,11 +58,11 @@ export default function LoginPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-black text-brand-navy-dark tracking-tight font-sans">
           Welcome back
         </h2>
-        <p className="text-muted-foreground text-sm">
-          Sign in to your HRMS account to continue
+        <p className="text-gray-400 text-sm font-sans font-light">
+          Sign in to your HrFlow account to continue
         </p>
       </div>
 
@@ -74,14 +74,14 @@ export default function LoginPage() {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="identifier">Login ID or Email</Label>
+          <Label htmlFor="identifier" className="text-xs font-bold text-gray-700">Login ID or Email</Label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="identifier"
               type="text"
               placeholder="name@example.com or ACME20260001"
-              className="h-9 pl-10"
+              className="h-10 pl-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               required
@@ -91,21 +91,21 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-xs font-bold text-gray-700">Password</Label>
             <Link
               href="/forgot-password"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-brand-navy-light hover:text-brand-navy-dark transition-colors font-medium hover:underline"
             >
               Forgot password?
             </Link>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
-              className="h-9 pl-10 pr-10"
+              className="h-10 pl-10 pr-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -114,7 +114,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
         <Button
           type="submit"
-          className="w-full h-9 text-sm font-medium"
+          className="w-full h-10 text-sm font-bold bg-brand-navy-dark hover:bg-brand-navy-dark/95 text-white rounded-lg transition-transform active:scale-[0.98] border-0"
           disabled={loading}
         >
           {loading ? (
@@ -141,11 +141,11 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-gray-400 font-sans font-light">
         Don&apos;t have an account?{" "}
         <Link
           href="/signup"
-          className="font-medium text-foreground underline-offset-4 hover:underline"
+          className="font-bold text-brand-navy-light hover:text-brand-navy-dark underline underline-offset-4"
         >
           Sign up
         </Link>

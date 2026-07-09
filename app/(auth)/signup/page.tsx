@@ -114,11 +114,11 @@ export default function SignupPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-black text-brand-navy-dark tracking-tight font-sans">
           Create your company
         </h2>
-        <p className="text-muted-foreground text-sm">
-          Set up your organization&apos;s HRMS portal
+        <p className="text-gray-400 text-sm font-sans font-light">
+          Set up your organization&apos;s HrFlow portal
         </p>
       </div>
 
@@ -137,14 +137,14 @@ export default function SignupPage() {
 
         {/* Company Info */}
         <div className="space-y-2">
-          <Label htmlFor="companyName">Company Name</Label>
+          <Label htmlFor="companyName" className="text-xs font-bold text-gray-700">Company Name</Label>
           <div className="relative">
-            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="companyName"
               type="text"
               placeholder="Acme Corporation"
-              className="h-9 pl-10"
+              className="h-10 pl-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               required
@@ -153,19 +153,19 @@ export default function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="companyCode">
+          <Label htmlFor="companyCode" className="text-xs font-bold text-gray-700">
             Company Code{" "}
-            <span className="text-muted-foreground font-normal">
+            <span className="text-gray-400 font-normal">
               (2-6 letters, used in Login IDs)
             </span>
           </Label>
           <div className="relative">
-            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="companyCode"
               type="text"
               placeholder="ACME"
-              className="h-9 pl-10 uppercase"
+              className="h-10 pl-10 uppercase rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={companyCode}
               onChange={(e) =>
                 setCompanyCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6))
@@ -180,14 +180,14 @@ export default function SignupPage() {
         {/* Admin Info */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
+            <Label htmlFor="firstName" className="text-xs font-bold text-gray-700">First Name</Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
               <Input
                 id="firstName"
                 type="text"
                 placeholder="John"
-                className="h-9 pl-10"
+                className="h-10 pl-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
@@ -195,12 +195,12 @@ export default function SignupPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
+            <Label htmlFor="lastName" className="text-xs font-bold text-gray-700">Last Name</Label>
             <Input
               id="lastName"
               type="text"
               placeholder="Doe"
-              className="h-9"
+              className="h-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               required
@@ -209,14 +209,14 @@ export default function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className="text-xs font-bold text-gray-700">Email</Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="email"
               type="email"
               placeholder="admin@company.com"
-              className="h-9 pl-10"
+              className="h-10 pl-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -225,14 +225,14 @@ export default function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password" className="text-xs font-bold text-gray-700">Password</Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="Min. 8 characters"
-              className="h-9 pl-10 pr-10"
+              className="h-10 pl-10 pr-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -241,7 +241,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -253,14 +253,14 @@ export default function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Label htmlFor="confirmPassword" className="text-xs font-bold text-gray-700">Confirm Password</Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Re-enter password"
-              className="h-9 pl-10 pr-10"
+              className="h-10 pl-10 pr-10 rounded-lg text-sm border-gray-200 focus-visible:ring-brand-navy-light"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -268,7 +268,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {showConfirmPassword ? (
                 <EyeOff className="size-4" />
@@ -280,11 +280,11 @@ export default function SignupPage() {
         </div>
 
         {/* Dynamic Password Security Checklist */}
-        <div className="rounded-lg bg-muted/50 p-3 space-y-2 text-xs border border-border/50">
-          <p className="font-semibold text-muted-foreground">
+        <div className="rounded-xl bg-gray-50 p-4 space-y-2.5 text-xs border border-gray-100">
+          <p className="font-bold text-brand-navy-dark font-sans">
             Password Security Rules:
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <RequirementItem met={hasMinLength} text="At least 8 characters" />
             <RequirementItem met={hasUpperLower} text="Uppercase & lowercase" />
             <RequirementItem met={hasNumber} text="At least 1 number (0-9)" />
@@ -298,7 +298,7 @@ export default function SignupPage() {
 
         <Button
           type="submit"
-          className="w-full h-9 text-sm font-medium"
+          className="w-full h-10 text-sm font-bold bg-brand-navy-dark hover:bg-brand-navy-dark/95 text-white rounded-lg transition-transform active:scale-[0.98] border-0"
           disabled={loading || !isPasswordValid || !isCompanyCodeValid || !!successMsg}
         >
           {loading ? (
@@ -312,11 +312,11 @@ export default function SignupPage() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-gray-400 font-sans font-light">
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-medium text-foreground underline-offset-4 hover:underline"
+          className="font-bold text-brand-navy-light hover:text-brand-navy-dark underline underline-offset-4"
         >
           Sign in
         </Link>

@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -63,7 +62,6 @@ export default function RootLayout({
           </ToastProvider>
         </ThemeProvider>
         <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

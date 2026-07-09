@@ -71,6 +71,10 @@
     height: 0;
     }
   }
+  --color-brand-lime: #D4F547;
+  --color-brand-navy-dark: #0a1229;
+  --color-brand-navy-mid: #0f1f4a;
+  --color-brand-navy-light: #1e3a8a;
 }
 
 :root {
