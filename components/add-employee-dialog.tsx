@@ -62,6 +62,7 @@ export function AddEmployeeDialog({ adminUserId, onSuccess }: AddEmployeeDialogP
   // Success state
   const [createdLoginId, setCreatedLoginId] = useState("");
   const [createdTempPassword, setCreatedTempPassword] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   const resetForm = () => {
     setFirstName("");
@@ -100,6 +101,7 @@ export function AddEmployeeDialog({ adminUserId, onSuccess }: AddEmployeeDialogP
 
     setCreatedLoginId(result.data!.loginId);
     setCreatedTempPassword(result.data!.tempPassword);
+    setEmailSent(result.data!.emailSent);
     setStep("success");
     setLoading(false);
     onSuccess?.();
@@ -247,8 +249,10 @@ export function AddEmployeeDialog({ adminUserId, onSuccess }: AddEmployeeDialogP
                 Employee Created
               </DialogTitle>
               <DialogDescription>
-                Share these credentials with the employee securely. They can use
-                either the Login ID or email to sign in.
+                {emailSent
+                  ? "Credentials sent to " + email + "."
+                  : "Email sending failed. Share the credentials manually below."}
+                You can also copy them below.
               </DialogDescription>
             </DialogHeader>
 

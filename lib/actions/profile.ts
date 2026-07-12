@@ -1,7 +1,8 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/server";
-import type { ActionResult, Profile } from "@/lib/types";
+import { logActivity } from "@/lib/actions/activity";
+import type { ActionResult, Company, Profile } from "@/lib/types";
 
 /**
  * Get the current user's profile.
@@ -83,8 +84,7 @@ export async function updateProfile(
       "government_id",
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let updateData: Record<string, any>;
+    let updateData: Record<string, unknown>;
 
     if (isAdmin) {
       // Admin can edit everything except id, company_id, created_at
@@ -141,6 +141,92 @@ export async function getAllEmployees(
     return { success: true, data: (data || []) as Profile[] };
   } catch (err) {
     console.error("getAllEmployees error:", err);
+    return { success: false, error: "An unexpected error occurred." };
+  }
+}
+
+/**
+ * Delete an employee (admin-only).
+ * Removes auth user (cascades to profile, leave balances, attendance, etc.).
+ */
+export async function deleteEmployee(
+  employeeId: string,
+  adminUserId: string
+): Promise<ActionResult> {
+  try {
+    // Verify admin exists and get their company
+    const { data: adminProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("company_id, role")
+      .eq("id", adminUserId)
+      .single();
+
+    if (!adminProfile || adminProfile.role !== "admin") {
+      return { success: false, error: "Only admins can delete employees." };
+    }
+
+    // Get the employee to verify same company
+    const { data: employee } = await supabaseAdmin
+      .from("profiles")
+      .select("company_id, first_name, last_name, login_id")
+      .eq("id", employeeId)
+      .single();
+
+    if (!employee) {
+      return { success: false, error: "Employee not found." };
+    }
+
+    if (employee.company_id !== adminProfile.company_id) {
+      return { success: false, error: "Employee does not belong to your company." };
+    }
+
+    // Clean up orphaned data before deleting auth user
+    await supabaseAdmin.from("activity_log").delete().eq("profile_id", employeeId);
+    await supabaseAdmin.from("notifications").delete().eq("profile_id", employeeId);
+
+    // Delete auth user — cascades to profile, leave_balances, leave_requests,
+    // attendance, salary_structures (and their salary_components)
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(employeeId);
+
+    if (authError) {
+      return { success: false, error: authError.message };
+    }
+
+    // Log activity
+    await logActivity({
+      companyId: adminProfile.company_id,
+      profileId: adminUserId,
+      action: "employee_deleted",
+      details: `Deleted employee ${employee.first_name} ${employee.last_name} (${employee.login_id || employeeId})`,
+    });
+
+    return { success: true };
+  } catch (err) {
+    console.error("deleteEmployee error:", err);
+    return { success: false, error: "An unexpected error occurred." };
+  }
+}
+
+/**
+ * Get company details by ID.
+ */
+export async function getCompany(
+  companyId: string
+): Promise<ActionResult<Pick<Company, "name" | "company_code">>> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("companies")
+      .select("name, company_code")
+      .eq("id", companyId)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: error?.message || "Company not found." };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error("getCompany error:", err);
     return { success: false, error: "An unexpected error occurred." };
   }
 }

@@ -24,15 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from "@/components/animate-ui/components/radix/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/animate-ui/primitives/radix/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,160 +35,64 @@ import {
   DropdownMenuTrigger,
 } from "@/components/animate-ui/components/radix/dropdown-menu";
 import {
-  AudioWaveform,
-  Bell,
-  BookOpen,
-  Bot,
-  ChevronRight,
-  ChevronsUpDown,
-  Command,
-  CreditCard,
-  Folder,
-  Forward,
-  Frame,
-  GalleryVerticalEnd,
-  LogOut,
-  Map,
-  MoreHorizontal,
-  PieChart,
-  Settings,
-  Settings2,
-  SquareTerminal,
-  Trash2,
+  LayoutDashboard,
+  User,
+  Clock,
+  CalendarDays,
+  Wallet,
+  Users,
+  Building2,
   UserCheck,
   Calendar,
-  FileText,
-  Users,
-  ShieldAlert,
-  Sparkles,
-  User,
+  CreditCard,
+  Bell,
+  Settings,
+  LogOut,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { NotificationBell } from "@/components/notification-bell";
 import { supabase } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-const DATA = {
-  teams: [
-    {
-      name: "HRMS Portal",
-      logo: GalleryVerticalEnd,
-      plan: "Odoo Hackathon 2026",
-    },
-    {
-      name: "Tech Department",
-      logo: AudioWaveform,
-      plan: "Engineering",
-    },
-    {
-      name: "HR Operations",
-      logo: Command,
-      plan: "Management",
-    },
-  ],
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard",
-        },
-        {
-          title: "Recent Activity",
-          url: "/dashboard#activity",
-        },
-      ],
-    },
-    {
-      title: "Profile",
-      url: "/dashboard/profile",
-      icon: Frame,
-      items: [
-        {
-          title: "Personal Details",
-          url: "/dashboard/profile",
-        },
-        {
-          title: "Job & Salary",
-          url: "/dashboard/profile#job",
-        },
-      ],
-    },
-    {
-      title: "Attendance",
-      url: "/dashboard/attendance",
-      icon: UserCheck,
-      items: [
-        {
-          title: "Daily Check-in",
-          url: "/dashboard/attendance",
-        },
-        {
-          title: "Weekly Log",
-          url: "/dashboard/attendance#weekly",
-        },
-      ],
-    },
-    {
-      title: "Leave Requests",
-      url: "/dashboard/leaves",
-      icon: Calendar,
-      items: [
-        {
-          title: "Apply Leave",
-          url: "/dashboard/leaves",
-        },
-        {
-          title: "Leave History",
-          url: "/dashboard/leaves#history",
-        },
-      ],
-    },
-    {
-      title: "Payroll",
-      url: "/dashboard/payroll",
-      icon: FileText,
-      items: [
-        {
-          title: "Salary Structure",
-          url: "/dashboard/payroll",
-        },
-        {
-          title: "Payslips",
-          url: "/dashboard/payroll#payslips",
-        },
-      ],
-    },
-  ],
-  adminModules: [
-    {
-      name: "Employee Directory",
-      url: "/dashboard/admin/employees",
-      icon: Users,
-    },
-    {
-      name: "Admin Attendance",
-      url: "/dashboard/admin/attendance",
-      icon: UserCheck,
-    },
-    {
-      name: "Leave Approvals",
-      url: "/dashboard/admin/leaves",
-      icon: Calendar,
-    },
-    {
-      name: "Payroll Management",
-      url: "/dashboard/admin/payroll",
-      icon: CreditCard,
-    },
-  ],
+interface NavItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const employeeNav: NavItem[] = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Profile", url: "/dashboard/profile", icon: User },
+  { title: "Attendance", url: "/dashboard/attendance", icon: Clock },
+  { title: "Leaves", url: "/dashboard/leaves", icon: CalendarDays },
+  { title: "Payroll", url: "/dashboard/payroll", icon: Wallet },
+];
+
+const adminNav: NavItem[] = [
+  { title: "Employees", url: "/dashboard/admin/employees", icon: Users },
+  { title: "Departments", url: "/dashboard/admin/departments", icon: Building2 },
+  { title: "Attendance", url: "/dashboard/admin/attendance", icon: UserCheck },
+  { title: "Leave Approvals", url: "/dashboard/admin/leaves", icon: Calendar },
+  { title: "Payroll", url: "/dashboard/admin/payroll", icon: CreditCard },
+];
+
+const navTitles: Record<string, string> = {
+  "/dashboard": "Overview",
+  "/dashboard/profile": "Profile",
+  "/dashboard/attendance": "Attendance",
+  "/dashboard/leaves": "Leaves",
+  "/dashboard/payroll": "Payroll",
+  "/dashboard/admin/employees": "Employees",
+  "/dashboard/admin/departments": "Departments",
+  "/dashboard/admin/attendance": "Attendance",
+  "/dashboard/admin/leaves": "Leave Approvals",
+  "/dashboard/admin/payroll": "Payroll",
 };
 
 export const DashboardSidebar = ({
@@ -205,16 +101,23 @@ export const DashboardSidebar = ({
   children?: React.ReactNode;
 }) => {
   const isMobile = useIsMobile();
-  const [activeTeam, setActiveTeam] = React.useState(DATA.teams[0]);
+  const pathname = usePathname();
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [user, setUser] = React.useState<SupabaseUser | null>(null);
+  const [profileId, setProfileId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user);
       if (!data.user) {
         router.push("/login");
+      } else {
+        const { getMyProfile } = await import("@/lib/actions/profile");
+        const result = await getMyProfile(data.user.id);
+        if (result.success && result.data) {
+          setProfileId(result.data.id);
+        }
       }
     });
 
@@ -248,7 +151,12 @@ export const DashboardSidebar = ({
     router.refresh();
   };
 
-  if (!activeTeam) return null;
+  const isActive = (url: string) => {
+    if (url === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(url);
+  };
+
+  const currentPageTitle = navTitles[pathname] || "";
 
   return (
     <>
@@ -257,77 +165,39 @@ export const DashboardSidebar = ({
           <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton
-                      size="lg"
-                      className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                    >
-                      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                        <activeTeam.logo className="size-4" />
-                      </div>
-                      <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">
-                          {activeTeam.name}
-                        </span>
-                        <span className="truncate text-xs">
-                          {activeTeam.plan}
-                        </span>
-                      </div>
-                      <ChevronsUpDown className="ml-auto" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                    align="start"
-                    side={isMobile ? "bottom" : "right"}
-                    sideOffset={4}
-                  >
-                    <DropdownMenuLabel className="text-xs text-muted-foreground">
-                      Departments
-                    </DropdownMenuLabel>
-                    {DATA.teams.map((team) => (
-                      <DropdownMenuItem
-                        key={team.name}
-                        onClick={() => setActiveTeam(team)}
-                        className="gap-2 p-2"
-                      >
-                        <div className="flex size-6 items-center justify-center rounded-sm border">
-                          <team.logo className="size-4 shrink-0" />
-                        </div>
-                        {team.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-3 px-2 py-2">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm">
+                    H
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-semibold">HRMS Portal</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {userRole === "admin" ? "Admin Panel" : "Employee Portal"}
+                    </span>
+                  </div>
+                </div>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarHeader>
 
           <SidebarContent>
-            {/* ONLY RENDER ADMIN MODULES IF USER IS AN ADMIN */}
+            {/* Admin Section */}
             {userRole === "admin" && (
-              <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-                <div className="flex items-center justify-between px-2 py-1.5 mb-1">
-                  <SidebarGroupLabel className="p-0 text-foreground font-extrabold tracking-wide uppercase text-[11px] flex items-center gap-1.5">
-                    <Sparkles className="size-3.5" />
-                    HR Admin Modules
-                  </SidebarGroupLabel>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-bold border border-primary/20">
-                    ADMIN
-                  </span>
-                </div>
+              <SidebarGroup>
+                <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                  Admin
+                </SidebarGroupLabel>
                 <SidebarMenu>
-                  {DATA.adminModules.map((item) => (
-                    <SidebarMenuItem key={item.name}>
+                  {adminNav.map((item) => (
+                    <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton
                         asChild
-                        tooltip={item.name}
-                        className="hover:bg-accent hover:text-accent-foreground transition-colors font-medium"
+                        tooltip={item.title}
+                        isActive={isActive(item.url)}
                       >
                         <Link href={item.url}>
-                          <item.icon className="text-muted-foreground shrink-0" />
-                          <span>{item.name}</span>
+                          <item.icon className="shrink-0" />
+                          <span>{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -336,42 +206,25 @@ export const DashboardSidebar = ({
               </SidebarGroup>
             )}
 
-            {/* EMPLOYEE PORTAL (COMMON FOR ALL OR PERSONAL FOR ADMIN) */}
+            {/* Employee Section */}
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground">
-                {userRole === "admin" ? "My Personal Employee Account" : "Employee Portal"}
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                {userRole === "admin" ? "Self Service" : "Menu"}
               </SidebarGroupLabel>
               <SidebarMenu>
-                {DATA.navMain.map((item) => (
-                  <Collapsible
-                    key={item.title}
-                    asChild
-                    defaultOpen={item.isActive}
-                    className="group/collapsible"
-                  >
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title}>
-                          {item.icon && <item.icon />}
-                          <span>{item.title}</span>
-                          <ChevronRight className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.items?.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild>
-                                <Link href={subItem.url}>
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+                {employeeNav.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={isActive(item.url)}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="shrink-0" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroup>
@@ -392,13 +245,13 @@ export const DashboardSidebar = ({
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="grid flex-1 text-left text-sm leading-tight">
+                      <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                         <span className="truncate font-semibold">{userName}</span>
                         <span className="truncate text-xs text-muted-foreground">
                           {userRole === "admin" ? "HR Officer" : "Employee"}
                         </span>
                       </div>
-                      <ChevronsUpDown className="ml-auto size-4" />
+                      <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -435,10 +288,6 @@ export const DashboardSidebar = ({
                         <Bell className="mr-2 size-4" />
                         Notifications
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
-                        <User className="mr-2 size-4" />
-                        My Profile
-                      </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
@@ -455,25 +304,39 @@ export const DashboardSidebar = ({
 
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b">
-            <div className="flex items-center gap-2 px-4">
+            <div className="flex items-center gap-2 px-4 flex-1">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
                     <BreadcrumbLink href="/dashboard">
-                      {userRole === "admin" ? "HR Admin Portal" : "HRMS Dashboard"}
+                      Dashboard
                     </BreadcrumbLink>
                   </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Overview</BreadcrumbPage>
-                  </BreadcrumbItem>
+                  {currentPageTitle && currentPageTitle !== "Overview" && (
+                    <>
+                      <BreadcrumbSeparator className="hidden md:block" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{currentPageTitle}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  )}
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
+            <div className="flex items-center gap-1 px-4">
+              {profileId && <NotificationBell profileId={profileId} />}
+            </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 pt-4">{children}</div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="flex flex-1 flex-col gap-4 p-4 md:p-6 pt-4"
+          >
+            {children}
+          </motion.div>
         </SidebarInset>
       </SidebarProvider>
 
@@ -487,4 +350,4 @@ export const DashboardSidebar = ({
       />
     </>
   );
-};
+}

@@ -121,4 +121,5 @@ export interface CreateEmployeeResult {
   loginId: string;
   tempPassword: string;
   profileId: string;
+  emailSent: boolean;
 }

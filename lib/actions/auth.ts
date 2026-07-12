@@ -2,6 +2,8 @@
 
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { generateLoginId } from "@/lib/login-id";
+import { logActivity } from "@/lib/actions/activity";
+import { sendWelcomeEmail } from "@/lib/services/email";
 import type { ActionResult, CreateEmployeeResult } from "@/lib/types";
 
 /**
@@ -218,7 +220,23 @@ export async function createEmployee(formData: {
       await supabaseAdmin.from("leave_balances").insert(balances);
     }
 
-    console.log(`[HRMS] Employee created — Login ID: ${loginId}, Temp Password: ${tempPassword}`);
+    // Log activity
+    await logActivity({
+      companyId,
+      profileId: formData.adminUserId,
+      action: "employee_created",
+      details: `Created employee ${formData.firstName} ${formData.lastName} (${loginId})`,
+    });
+
+    console.log(`[HRMS] Employee created — Login ID: ${loginId}`);
+
+    // Send welcome email
+    const emailSent = await sendWelcomeEmail({
+      email: formData.email.trim(),
+      name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+      loginId,
+      tempPassword,
+    });
 
     return {
       success: true,
@@ -226,6 +244,7 @@ export async function createEmployee(formData: {
         loginId,
         tempPassword,
         profileId: authData.user.id,
+        emailSent,
       },
     };
   } catch (err) {

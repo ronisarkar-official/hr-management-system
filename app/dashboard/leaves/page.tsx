@@ -16,6 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +44,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase/client";
 import { getLeaveBalances, getMyLeaveRequests, createLeaveRequest } from "@/lib/actions/leaves";
+import { formatDateNumeric } from "@/lib/locale";
 import type { LeaveBalance, LeaveRequest, LeaveType } from "@/lib/types";
 
 export default function LeavesPage() {
@@ -83,24 +86,18 @@ export default function LeavesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <CalendarIcon className="size-6" />
-            Leave Management
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            View your balances and submit time-off requests
-          </p>
-        </div>
-        {userId && (
+      <PageHeader
+        title="Leave Management"
+        description="View your balances and submit time-off requests"
+        icon={<CalendarIcon className="size-6" />}
+        action={userId && (
           <NewLeaveRequestDialog
             userId={userId}
             balances={balances}
             onSuccess={() => loadData(userId)}
           />
         )}
-      </div>
+      />
 
       {/* Leave Balance Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -111,7 +108,7 @@ export default function LeavesPage() {
           const pct = b.allocated_days > 0 ? (b.used_days / b.allocated_days) * 100 : 0;
 
           return (
-            <div key={b.id} className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div key={b.id} className="rounded-xl border border-border bg-card p-5 space-y-3 hover:shadow-md hover:border-primary/20 transition-all duration-200">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-sm">{typeName}</p>
                 <Badge variant="secondary" className="text-[10px]">
@@ -155,8 +152,12 @@ export default function LeavesPage() {
             <TableBody>
               {requests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No leave requests yet.
+                  <TableCell colSpan={6} className="py-0">
+                    <EmptyState
+                      icon={<CalendarIcon className="size-12" />}
+                      title="No leave requests yet"
+                      description="Submit a new leave request to get started."
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -168,10 +169,10 @@ export default function LeavesPage() {
                         {lt?.name || "—"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {new Date(req.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        {formatDateNumeric(req.start_date)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {new Date(req.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        {formatDateNumeric(req.end_date)}
                       </TableCell>
                       <TableCell className="text-sm text-right">{req.days_requested}</TableCell>
                       <TableCell>

@@ -1,6 +1,8 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/actions/notifications";
+import { logActivity } from "@/lib/actions/activity";
 import type { ActionResult, SalaryStructure, SalaryComponent } from "@/lib/types";
 
 /**
@@ -57,6 +59,14 @@ export async function upsertSalaryStructure(
   try {
     const yearlyWage = data.monthly_wage * 12;
 
+    // Get profile for company_id
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("company_id, first_name, last_name")
+      .eq("id", profileId)
+      .single();
+    if (!profile) return { success: false, error: "Profile not found." };
+
     const { data: existing } = await supabaseAdmin
       .from("salary_structures")
       .select("id")
@@ -81,6 +91,23 @@ export async function upsertSalaryStructure(
         .single();
 
       if (error) return { success: false, error: error.message };
+
+      // Notify + log
+      await Promise.all([
+        createNotification({
+          profileId,
+          title: "Salary Updated",
+          message: "Your salary structure has been updated.",
+          type: "salary_updated",
+        }),
+        logActivity({
+          companyId: profile.company_id,
+          profileId,
+          action: "salary_updated",
+          details: "Salary structure updated",
+        }),
+      ]);
+
       return { success: true, data: updated as SalaryStructure };
     }
 
@@ -100,6 +127,23 @@ export async function upsertSalaryStructure(
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Notify + log
+    await Promise.all([
+      createNotification({
+        profileId,
+        title: "Salary Structure Created",
+        message: "Your salary structure has been set up.",
+        type: "salary_updated",
+      }),
+      logActivity({
+        companyId: profile.company_id,
+        profileId,
+        action: "salary_updated",
+        details: "Salary structure created",
+      }),
+    ]);
+
     return { success: true, data: created as SalaryStructure };
   } catch (err) {
     console.error("upsertSalaryStructure error:", err);
@@ -174,7 +218,7 @@ export async function updateSalaryComponents(
     if (total > monthlyWage) {
       return {
         success: false,
-        error: `Total components (₹${total.toLocaleString()}) exceed monthly wage (₹${monthlyWage.toLocaleString()}).`,
+        error: `Total components exceed monthly wage.`,
       };
     }
 

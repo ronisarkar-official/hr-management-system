@@ -21,12 +21,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/ui/stat-card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
-import { getMyProfile } from "@/lib/actions/profile";
-import { getAllEmployees } from "@/lib/actions/profile";
-import { getTodayStatus, checkIn, checkOut } from "@/lib/actions/attendance";
+import { getMyProfile, getAllEmployees } from "@/lib/actions/profile";
+import { getTodayStatus, checkIn, checkOut, getMyAttendance } from "@/lib/actions/attendance";
 import { getLeaveBalances } from "@/lib/actions/leaves";
-import { getMyAttendance } from "@/lib/actions/attendance";
+import { formatTime } from "@/lib/locale";
+import { ActivityFeed } from "@/components/activity-feed";
 import type { Profile, AttendanceRecord, LeaveBalance } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -128,14 +131,10 @@ function AdminDashboardView({ profile }: { profile: Profile }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {profile.first_name}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          HR Admin Dashboard — manage your team
-        </p>
-      </div>
+      <PageHeader
+        title={`Welcome back, ${profile.first_name}`}
+        description="HR Admin Dashboard — manage your team"
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -165,6 +164,15 @@ function AdminDashboardView({ profile }: { profile: Profile }) {
         />
       </div>
 
+      {/* Activity Feed */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <Clock className="size-4" />
+          Recent Activity
+        </h3>
+        <ActivityFeed companyId={profile.company_id} limit={10} />
+      </div>
+
       {/* Search + Employee Grid */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -192,11 +200,27 @@ function AdminDashboardView({ profile }: { profile: Profile }) {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            {employees.length === 0
-              ? "No employees yet. Add your first employee from the Employee Directory."
-              : "No employees match your search."}
-          </div>
+          employees.length === 0 ? (
+            <EmptyState
+              icon={<Users className="size-12" />}
+              title="No employees yet"
+              description="Add your first employee from the Employee Directory."
+              action={
+                <Link href="/dashboard/admin/employees">
+                  <Button size="sm">
+                    <Users className="mr-2 size-4" />
+                    Add Employees
+                  </Button>
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={<Search className="size-12" />}
+              title="No results found"
+              description="No employees match your search. Try a different name, department, or Login ID."
+            />
+          )
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((emp) => {
@@ -316,56 +340,47 @@ function EmployeeDashboardView({ profile }: { profile: Profile }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Good {getGreeting()}, {profile.first_name}!
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {profile.job_title || "Employee"} • {profile.department || ""}
-          </p>
-        </div>
-
-        {/* Check In / Check Out Button */}
-        <div className="flex items-center gap-3">
-          {isCheckedIn && !isCheckedOut && todayStatus?.check_in_at && (
-            <Badge variant="secondary" className="text-xs">
-              <Clock className="mr-1 size-3" />
-              In since{" "}
-              {new Date(todayStatus.check_in_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Badge>
-          )}
-          {isCheckedOut ? (
-            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-200">
-              <UserCheck className="mr-1 size-3" />
-              Day complete — {todayStatus?.work_hours?.toFixed(1)}h
-            </Badge>
-          ) : (
-            <Button
-              onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
-              disabled={checkingIn}
-              size="sm"
-              className={
-                isCheckedIn
-                  ? "bg-amber-600 hover:bg-amber-700 text-white"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
-              }
-            >
-              {checkingIn ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : isCheckedIn ? (
-                <LogOutIcon className="mr-2 size-4" />
-              ) : (
-                <LogIn className="mr-2 size-4" />
-              )}
-              {isCheckedIn ? "Check Out" : "Check In"}
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title={`Good ${getGreeting()}, ${profile.first_name}!`}
+        description={`${profile.job_title || "Employee"}${profile.department ? ` \u2022 ${profile.department}` : ""}`}
+        action={
+          <div className="flex items-center gap-3">
+            {isCheckedIn && !isCheckedOut && todayStatus?.check_in_at && (
+              <Badge variant="secondary" className="text-xs">
+                <Clock className="mr-1 size-3" />
+                In since{" "}
+                {formatTime(todayStatus.check_in_at, { hour: "2-digit", minute: "2-digit" })}
+              </Badge>
+            )}
+            {isCheckedOut ? (
+              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-200">
+                <UserCheck className="mr-1 size-3" />
+                Day complete — {todayStatus?.work_hours?.toFixed(1)}h
+              </Badge>
+            ) : (
+              <Button
+                onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
+                disabled={checkingIn}
+                size="sm"
+                className={
+                  isCheckedIn
+                    ? "bg-warning hover:bg-warning/90 text-warning-foreground"
+                    : "bg-success hover:bg-success/90 text-success-foreground"
+                }
+              >
+                {checkingIn ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : isCheckedIn ? (
+                  <LogOutIcon className="mr-2 size-4" />
+                ) : (
+                  <LogIn className="mr-2 size-4" />
+                )}
+                {isCheckedIn ? "Check Out" : "Check In"}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Quick-access cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -446,30 +461,6 @@ function EmployeeDashboardView({ profile }: { profile: Profile }) {
 }
 
 /* ── Shared UI helpers ──────────────────────────────────────────────────── */
-
-function StatCard({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-      <div className={`inline-flex items-center justify-center size-10 rounded-lg ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
 
 function QuickCard({
   href,

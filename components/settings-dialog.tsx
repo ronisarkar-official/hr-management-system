@@ -8,7 +8,9 @@ import { type SettingsSection, SECTION_META } from '@/components/settings/settin
 import { SettingsSidebar, SettingsMobileNav } from '@/components/settings/settings-sidebar';
 import { ProfileContent } from '@/components/settings/profile-content';
 import { PreferencesContent } from '@/components/settings/preferences-content';
-import { PlaceholderContent } from '@/components/settings/placeholder-content';
+import { NotificationsContent } from '@/components/settings/notifications-content';
+import { GeneralContent } from '@/components/settings/general-content';
+import { PeopleContent } from '@/components/settings/people-content';
 
 // ---------------------------------------------------------------------------
 // Main Settings Dialog
@@ -111,19 +113,12 @@ export function SettingsDialog({
 												/>
 											) : activeSection === 'preferences' ? (
 												<PreferencesContent />
+											) : activeSection === 'notifications' ? (
+												<NotificationsContent />
+											) : activeSection === 'general' ? (
+												<GeneralContent />
 											) : (
-												<PlaceholderContent
-													title={
-														SECTION_META[
-															activeSection
-														].title
-													}
-													description={
-														SECTION_META[
-															activeSection
-														].description
-													}
-												/>
+												<PeopleContent />
 											)}
 										</motion.div>
 									</AnimatePresence>

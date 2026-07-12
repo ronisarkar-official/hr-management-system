@@ -1,6 +1,8 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/actions/notifications";
+import { logActivity } from "@/lib/actions/activity";
 import type { ActionResult, AttendanceRecord } from "@/lib/types";
 
 /**
@@ -52,6 +54,30 @@ export async function checkIn(
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Log activity
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("company_id")
+      .eq("id", profileId)
+      .single();
+    if (profile) {
+      await Promise.all([
+        logActivity({
+          companyId: profile.company_id,
+          profileId,
+          action: "check_in",
+          details: "Checked in",
+        }),
+        createNotification({
+          profileId,
+          title: "Check-In",
+          message: "You checked in successfully.",
+          type: "attendance",
+        }),
+      ]);
+    }
+
     return { success: true, data: data as AttendanceRecord };
   } catch (err) {
     console.error("checkIn error:", err);
@@ -101,6 +127,30 @@ export async function checkOut(
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Log activity
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("company_id")
+      .eq("id", profileId)
+      .single();
+    if (profile) {
+      await Promise.all([
+        logActivity({
+          companyId: profile.company_id,
+          profileId,
+          action: "check_out",
+          details: `Checked out after ${workHours.toFixed(1)}h`,
+        }),
+        createNotification({
+          profileId,
+          title: "Check-Out",
+          message: `You checked out after ${workHours.toFixed(1)} hours.`,
+          type: "attendance",
+        }),
+      ]);
+    }
+
     return { success: true, data: data as AttendanceRecord };
   } catch (err) {
     console.error("checkOut error:", err);

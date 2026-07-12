@@ -7,6 +7,7 @@ import {
   Search,
   UserCheck,
   Clock,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,10 @@ import {
 import { supabase } from "@/lib/supabase/client";
 import { getMyProfile } from "@/lib/actions/profile";
 import { getAllAttendance } from "@/lib/actions/attendance";
+import { formatDateFull, formatTime } from "@/lib/locale";
+import { exportToCSV } from "@/lib/services/csv-export";
+import { Pagination } from "@/components/ui/pagination";
+import { PAGINATION } from "@/lib/constants";
 
 interface AttendanceWithProfile {
   id: string;
@@ -49,6 +54,8 @@ export default function AdminAttendancePage() {
   );
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGINATION.defaultPageSize);
 
   const loadData = useCallback(async (cId: string, date: string) => {
     setLoading(true);
@@ -65,11 +72,16 @@ export default function AdminAttendancePage() {
         const profile = await getMyProfile(data.user.id);
         if (profile.success && profile.data) {
           setCompanyId(profile.data.company_id);
-          await loadData(profile.data.company_id, selectedDate);
         }
       }
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (companyId) {
+      loadData(companyId, selectedDate);
+    }
+  }, [companyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (companyId) {
@@ -89,20 +101,15 @@ export default function AdminAttendancePage() {
     setSelectedDate(d.toISOString().split("T")[0]);
   };
 
-  const filtered = records.filter((r) => {
+  const filtered = React.useMemo(() => records.filter((r) => {
     const name = `${r.profile.first_name} ${r.profile.last_name}`.toLowerCase();
     const loginId = (r.profile.login_id || "").toLowerCase();
     const dept = (r.profile.department || "").toLowerCase();
     const q = search.toLowerCase();
     return name.includes(q) || loginId.includes(q) || dept.includes(q);
-  });
+  }), [records, search]);
 
-  const dateDisplay = new Date(selectedDate + "T00:00:00").toLocaleDateString("en-IN", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const dateDisplay = formatDateFull(selectedDate + "T00:00:00");
 
   return (
     <div className="space-y-6">
@@ -144,7 +151,7 @@ export default function AdminAttendancePage() {
             placeholder="Search employees..."
             className="h-9 pl-10"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
       </div>
@@ -155,6 +162,28 @@ export default function AdminAttendancePage() {
           <Clock className="mr-1 size-3" />
           {records.length} record{records.length !== 1 ? "s" : ""}
         </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => {
+            exportToCSV(
+              records.map((r) => ({
+                Name: `${r.profile.first_name} ${r.profile.last_name}`,
+                "Login ID": r.profile.login_id || "",
+                Department: r.profile.department || "",
+                "Check In": r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString() : "",
+                "Check Out": r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString() : "",
+                "Work Hours": r.work_hours || 0,
+                Status: r.status,
+              })),
+              "attendance-" + selectedDate
+            );
+          }}
+        >
+          <Download className="mr-1 size-3" />
+          Export CSV
+        </Button>
       </div>
 
       {/* Table */}
@@ -185,7 +214,7 @@ export default function AdminAttendancePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((rec) => (
+                filtered.slice((page - 1) * pageSize, page * pageSize).map((rec) => (
                   <TableRow key={rec.id}>
                     <TableCell className="text-sm font-medium">
                       {rec.profile.first_name} {rec.profile.last_name}
@@ -198,12 +227,12 @@ export default function AdminAttendancePage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {rec.check_in_at
-                        ? new Date(rec.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        ? formatTime(rec.check_in_at, { hour: "2-digit", minute: "2-digit" })
                         : "—"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {rec.check_out_at
-                        ? new Date(rec.check_out_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        ? formatTime(rec.check_out_at, { hour: "2-digit", minute: "2-digit" })
                         : "—"}
                     </TableCell>
                     <TableCell className="text-sm text-right">
@@ -224,6 +253,15 @@ export default function AdminAttendancePage() {
               )}
             </TableBody>
           </Table>
+          <div className="px-4">
+            <Pagination
+              currentPage={page}
+              totalItems={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            />
+          </div>
         </div>
       )}
     </div>

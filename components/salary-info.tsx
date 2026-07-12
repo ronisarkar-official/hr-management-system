@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Save, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, AlertCircle, CheckCircle2, Calculator } from "lucide-react";
 import { upsertSalaryStructure, updateSalaryComponents } from "@/lib/actions/salary";
+import { formatCurrency } from "@/lib/locale";
 import type { SalaryStructure, SalaryComponent } from "@/lib/types";
 
 interface SalaryInfoProps {
@@ -78,9 +79,11 @@ export function SalaryInfo({ profileId, salaryData, readOnly, onUpdate }: Salary
     }
   }, [salaryData]);
 
-  // Recompute amounts whenever wage or component values change
+  const skipRecompute = useRef(false);
+
   useEffect(() => {
     if (monthlyWage <= 0) return;
+    if (skipRecompute.current) { skipRecompute.current = false; return; }
 
     const basicComp = components.find((c) => c.name.toLowerCase().includes("basic"));
     let basicAmount = 0;
@@ -107,18 +110,17 @@ export function SalaryInfo({ profileId, salaryData, readOnly, onUpdate }: Salary
       return { ...c, computed_amount: Math.round(computed * 100) / 100 };
     });
 
-    // Only update if values actually changed
     const hasChanged = updated.some(
       (u, i) => u.computed_amount !== components[i]?.computed_amount
     );
     if (hasChanged) {
+      skipRecompute.current = true;
       setComponents(updated);
     }
-  }, [monthlyWage, components]);
+  }, [monthlyWage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalComponents = components.reduce((sum, c) => sum + c.computed_amount, 0);
   const exceeds = monthlyWage > 0 && totalComponents > monthlyWage;
-
   const yearlyWage = monthlyWage * 12;
 
   const updateComponent = (index: number, field: keyof LocalComponent, value: string | number) => {
@@ -143,7 +145,6 @@ export function SalaryInfo({ profileId, salaryData, readOnly, onUpdate }: Salary
     setError("");
     setSuccessMsg("");
 
-    // 1. Save salary structure
     const structResult = await upsertSalaryStructure(profileId, {
       wage_type: wageType,
       monthly_wage: monthlyWage,
@@ -159,7 +160,6 @@ export function SalaryInfo({ profileId, salaryData, readOnly, onUpdate }: Salary
       return;
     }
 
-    // 2. Save components
     const compResult = await updateSalaryComponents(
       structResult.data!.id,
       components.map((c) => ({
@@ -183,27 +183,28 @@ export function SalaryInfo({ profileId, salaryData, readOnly, onUpdate }: Salary
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+        <div className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
           {error}
         </div>
       )}
       {successMsg && (
-        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="size-4 shrink-0" />
           {successMsg}
         </div>
       )}
 
       {/* Wage Structure */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h3 className="font-semibold text-sm">Wage Structure</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Wage Type</Label>
-            {readOnly ? (
-              <p className="text-sm font-medium bg-muted/50 rounded-md px-3 py-2 capitalize">
-                {wageType}
-              </p>
-            ) : (
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-blue-400/40 via-blue-300/20 to-transparent" />
+        <div className="p-5 space-y-4">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <Calculator className="size-4 text-muted-foreground" />
+            Wage Structure
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <Field label="Wage Type" readOnly={readOnly} value={wageType} capitalize>
               <Select value={wageType} onValueChange={(v) => setWageType(v as "monthly" | "hourly")}>
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -211,179 +212,197 @@ export function SalaryInfo({ profileId, salaryData, readOnly, onUpdate }: Salary
                   <SelectItem value="hourly">Hourly</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Monthly Wage (₹)</Label>
-            {readOnly ? (
-              <p className="text-sm font-medium bg-muted/50 rounded-md px-3 py-2">
-                ₹{monthlyWage.toLocaleString("en-IN")}
-              </p>
-            ) : (
+            </Field>
+            <Field label="Monthly Wage" readOnly={readOnly} value={formatCurrency(monthlyWage)}>
               <Input
                 type="number"
                 value={monthlyWage}
                 onChange={(e) => setMonthlyWage(Number(e.target.value))}
                 className="h-8 text-sm"
               />
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Yearly Wage (₹)</Label>
-            <p className="text-sm font-medium bg-muted/50 rounded-md px-3 py-2">
-              ₹{yearlyWage.toLocaleString("en-IN")}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Working Days / Week</Label>
-            {readOnly ? (
-              <p className="text-sm font-medium bg-muted/50 rounded-md px-3 py-2">{workingDays}</p>
-            ) : (
+            </Field>
+            <Field label="Yearly Wage" value={formatCurrency(yearlyWage)} locked />
+            <Field label="Working Days / Week" readOnly={readOnly} value={String(workingDays)}>
               <Input type="number" value={workingDays} onChange={(e) => setWorkingDays(Number(e.target.value))} className="h-8 text-sm" />
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Working Hours / Week</Label>
-            {readOnly ? (
-              <p className="text-sm font-medium bg-muted/50 rounded-md px-3 py-2">{workingHours}</p>
-            ) : (
+            </Field>
+            <Field label="Working Hours / Week" readOnly={readOnly} value={String(workingHours)}>
               <Input type="number" value={workingHours} onChange={(e) => setWorkingHours(Number(e.target.value))} className="h-8 text-sm" />
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">PF Rate (%)</Label>
-            {readOnly ? (
-              <p className="text-sm font-medium bg-muted/50 rounded-md px-3 py-2">{pfRate}%</p>
-            ) : (
+            </Field>
+            <Field label="PF Rate" readOnly={readOnly} value={`${pfRate}%`}>
               <Input type="number" value={pfRate} onChange={(e) => setPfRate(Number(e.target.value))} className="h-8 text-sm" />
-            )}
+            </Field>
+            <Field label="Professional Tax" readOnly={readOnly} value={formatCurrency(professionalTax)}>
+              <Input type="number" value={professionalTax} onChange={(e) => setProfessionalTax(Number(e.target.value))} className="h-8 text-sm" />
+            </Field>
           </div>
         </div>
       </div>
 
       {/* Salary Components */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm">Salary Components</h3>
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-emerald-400/40 via-emerald-300/20 to-transparent" />
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Calculator className="size-4 text-muted-foreground" />
+              Salary Components
+            </h3>
+            {!readOnly && (
+              <Button size="sm" variant="outline" onClick={addComponent} className="h-7 text-xs">
+                <Plus className="mr-1 size-3" />
+                Add Component
+              </Button>
+            )}
+          </div>
+
+          {exceeds && (
+            <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="size-4 shrink-0" />
+              Total ({formatCurrency(totalComponents)}) exceeds monthly wage ({formatCurrency(monthlyWage)})
+            </div>
+          )}
+
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="py-2.5">Component</TableHead>
+                  <TableHead className="py-2.5">Type</TableHead>
+                  <TableHead className="py-2.5 text-right">Value</TableHead>
+                  <TableHead className="py-2.5 text-right">Amount</TableHead>
+                  {!readOnly && <TableHead className="py-2.5 w-10" />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {components.map((comp, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      {readOnly ? (
+                        <span className="text-sm font-medium">{comp.name}</span>
+                      ) : (
+                        <Input
+                          value={comp.name}
+                          onChange={(e) => updateComponent(i, "name", e.target.value)}
+                          className="h-7 text-xs"
+                          placeholder="Component name"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {readOnly ? (
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {comp.computation_type.replace(/_/g, " ")}
+                        </span>
+                      ) : (
+                        <Select
+                          value={comp.computation_type}
+                          onValueChange={(v) => updateComponent(i, "computation_type", v)}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fixed">Fixed</SelectItem>
+                            <SelectItem value="percentage_of_wage">% of Wage</SelectItem>
+                            <SelectItem value="percentage_of_basic">% of Basic</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {readOnly ? (
+                        <span className="text-sm">
+                          {comp.computation_type === "fixed"
+                            ? formatCurrency(comp.value)
+                            : `${comp.value}%`}
+                        </span>
+                      ) : (
+                        <Input
+                          type="number"
+                          value={comp.value}
+                          onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
+                          className="h-7 text-xs text-right w-24 ml-auto"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm tabular-nums">
+                      {formatCurrency(comp.computed_amount)}
+                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeComponent(i)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/20 font-semibold">
+                  <TableCell colSpan={3} className="text-right text-sm py-3">
+                    Total
+                  </TableCell>
+                  <TableCell className={`text-right text-sm py-3 tabular-nums ${exceeds ? "text-destructive" : ""}`}>
+                    {formatCurrency(totalComponents)}
+                  </TableCell>
+                  {!readOnly && <TableCell />}
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+
           {!readOnly && (
-            <Button size="sm" variant="outline" onClick={addComponent} className="h-7 text-xs">
-              <Plus className="mr-1 size-3" />
-              Add
-            </Button>
+            <div className="flex justify-end pt-1">
+              <Button onClick={handleSave} disabled={saving || exceeds} size="sm">
+                {saving ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 size-4" />
+                )}
+                Save Salary Structure
+              </Button>
+            </div>
           )}
         </div>
-
-        {exceeds && (
-          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-            <AlertCircle className="size-4 shrink-0" />
-            Total components (₹{totalComponents.toLocaleString("en-IN")}) exceed monthly wage (₹{monthlyWage.toLocaleString("en-IN")})
-          </div>
-        )}
-
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Component</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Value</TableHead>
-                <TableHead className="text-right">Amount (₹)</TableHead>
-                {!readOnly && <TableHead className="w-10" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {components.map((comp, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    {readOnly ? (
-                      <span className="text-sm">{comp.name}</span>
-                    ) : (
-                      <Input
-                        value={comp.name}
-                        onChange={(e) => updateComponent(i, "name", e.target.value)}
-                        className="h-7 text-xs"
-                        placeholder="Component name"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {readOnly ? (
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {comp.computation_type.replace(/_/g, " ")}
-                      </span>
-                    ) : (
-                      <Select
-                        value={comp.computation_type}
-                        onValueChange={(v) => updateComponent(i, "computation_type", v)}
-                      >
-                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed">Fixed</SelectItem>
-                          <SelectItem value="percentage_of_wage">% of Wage</SelectItem>
-                          <SelectItem value="percentage_of_basic">% of Basic</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {readOnly ? (
-                      <span className="text-sm">
-                        {comp.computation_type === "fixed"
-                          ? `₹${comp.value.toLocaleString("en-IN")}`
-                          : `${comp.value}%`}
-                      </span>
-                    ) : (
-                      <Input
-                        type="number"
-                        value={comp.value}
-                        onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
-                        className="h-7 text-xs text-right w-24 ml-auto"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-sm">
-                    ₹{comp.computed_amount.toLocaleString("en-IN")}
-                  </TableCell>
-                  {!readOnly && (
-                    <TableCell>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeComponent(i)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-              <TableRow className="bg-muted/30 font-semibold">
-                <TableCell colSpan={3} className="text-right text-sm">
-                  Total
-                </TableCell>
-                <TableCell className="text-right text-sm">
-                  ₹{totalComponents.toLocaleString("en-IN")}
-                </TableCell>
-                {!readOnly && <TableCell />}
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-
-        {!readOnly && (
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={saving || exceeds} size="sm">
-              {saving ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 size-4" />
-              )}
-              Save Salary Structure
-            </Button>
-          </div>
-        )}
       </div>
+    </div>
+  );
+}
+
+/* ── Field helper ──────────────────────────────────────────────────── */
+
+function Field({
+  label,
+  readOnly,
+  value,
+  children,
+  locked,
+  capitalize,
+}: {
+  label: string;
+  readOnly?: boolean;
+  value?: string;
+  children?: React.ReactNode;
+  locked?: boolean;
+  capitalize?: boolean;
+}) {
+  if (readOnly || locked) {
+    return (
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground font-medium">{label}</Label>
+        <p className={`text-sm font-medium bg-muted/40 rounded-lg px-3 py-2 border border-border/50 ${capitalize ? "capitalize" : ""}`}>
+          {value || "—"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground font-medium">{label}</Label>
+      {children}
     </div>
   );
 }

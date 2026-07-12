@@ -1,6 +1,9 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/actions/notifications";
+import { logActivity } from "@/lib/actions/activity";
+import { sendLeaveStatusEmail } from "@/lib/services/email";
 import type { ActionResult, LeaveBalance, LeaveRequest } from "@/lib/types";
 
 /**
@@ -72,6 +75,50 @@ export async function createLeaveRequest(data: {
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Notify admins + log activity
+    const { data: empProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("company_id, first_name, last_name")
+      .eq("id", data.profileId)
+      .single();
+
+    if (empProfile) {
+      const { data: leaveType } = await supabaseAdmin
+        .from("leave_types")
+        .select("name")
+        .eq("id", data.leaveTypeId)
+        .single();
+
+      const typeName = leaveType?.name || "Leave";
+
+      // Notify all admins in the company
+      const { data: admins } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("company_id", empProfile.company_id)
+        .eq("role", "admin");
+
+      if (admins) {
+        for (const admin of admins) {
+          await createNotification({
+            profileId: admin.id,
+            title: "New Leave Request",
+            message: `${empProfile.first_name} ${empProfile.last_name} requested ${data.daysRequested} day(s) of ${typeName}.`,
+            type: "leave_requested",
+          });
+        }
+      }
+
+      // Log activity
+      await logActivity({
+        companyId: empProfile.company_id,
+        profileId: data.profileId,
+        action: "leave_requested",
+        details: `${empProfile.first_name} ${empProfile.last_name} requested ${data.daysRequested} day(s) of ${typeName}`,
+      });
+    }
+
     return { success: true, data: request as LeaveRequest };
   } catch (err) {
     console.error("createLeaveRequest error:", err);
@@ -117,6 +164,55 @@ export async function approveLeaveRequest(
 
     if (updateError) return { success: false, error: updateError.message };
 
+    // Get employee profile + leave type for notification
+    const [empResult, ltResult] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("email, first_name, last_name, company_id")
+        .eq("id", request.profile_id)
+        .single(),
+      supabaseAdmin
+        .from("leave_types")
+        .select("name")
+        .eq("id", request.leave_type_id)
+        .single(),
+    ]);
+
+    const empProfile = empResult.data;
+    const leaveTypeName = ltResult.data?.name || "Leave";
+
+    // Notify the employee (in-app)
+    await createNotification({
+      profileId: request.profile_id,
+      title: "Leave Approved",
+      message:
+        adminRemarks
+          ? `Your ${leaveTypeName} request has been approved. Remarks: ${adminRemarks}`
+          : `Your ${leaveTypeName} request has been approved.`,
+      type: "leave_approved",
+    });
+
+    // Email the employee
+    if (empProfile) {
+      await sendLeaveStatusEmail({
+        employeeEmail: empProfile.email,
+        employeeName: `${empProfile.first_name} ${empProfile.last_name}`,
+        leaveType: leaveTypeName,
+        startDate: request.start_date,
+        endDate: request.end_date,
+        status: "approved",
+        adminRemarks,
+      });
+
+      // Log activity
+      await logActivity({
+        companyId: empProfile.company_id,
+        profileId: adminId,
+        action: "leave_approved",
+        details: `Approved ${leaveTypeName} for ${empProfile.first_name} ${empProfile.last_name}`,
+      });
+    }
+
     // Deduct from leave balance
     const { data: balance } = await supabaseAdmin
       .from("leave_balances")
@@ -151,7 +247,7 @@ export async function rejectLeaveRequest(
   try {
     const { data: request } = await supabaseAdmin
       .from("leave_requests")
-      .select("status")
+      .select("id, profile_id, start_date, end_date, leave_type_id, status")
       .eq("id", requestId)
       .single();
 
@@ -171,6 +267,55 @@ export async function rejectLeaveRequest(
       .eq("id", requestId);
 
     if (error) return { success: false, error: error.message };
+
+    // Get employee profile + leave type for notification
+    const [empResult, ltResult] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("email, first_name, last_name, company_id")
+        .eq("id", request.profile_id)
+        .single(),
+      supabaseAdmin
+        .from("leave_types")
+        .select("name")
+        .eq("id", request.leave_type_id)
+        .single(),
+    ]);
+
+    const empProfile = empResult.data;
+    const leaveTypeName = ltResult.data?.name || "Leave";
+
+    // Notify the employee (in-app)
+    await createNotification({
+      profileId: request.profile_id,
+      title: "Leave Rejected",
+      message:
+        adminRemarks
+          ? `Your ${leaveTypeName} request has been rejected. Remarks: ${adminRemarks}`
+          : `Your ${leaveTypeName} request has been rejected.`,
+      type: "leave_rejected",
+    });
+
+    // Email the employee
+    if (empProfile) {
+      await sendLeaveStatusEmail({
+        employeeEmail: empProfile.email,
+        employeeName: `${empProfile.first_name} ${empProfile.last_name}`,
+        leaveType: leaveTypeName,
+        startDate: request.start_date,
+        endDate: request.end_date,
+        status: "rejected",
+        adminRemarks,
+      });
+
+      await logActivity({
+        companyId: empProfile.company_id,
+        profileId: adminId,
+        action: "leave_rejected",
+        details: `Rejected ${leaveTypeName} for ${empProfile.first_name} ${empProfile.last_name}`,
+      });
+    }
+
     return { success: true };
   } catch (err) {
     console.error("rejectLeaveRequest error:", err);
